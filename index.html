@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legend OS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-blur: blur(20px);
+            --window-bg: rgba(255, 255, 255, 0.85);
+            --window-border: rgba(255, 255, 255, 0.3);
+            --text-color: #333;
+            --text-light: #666;
+            --accent-color: #007aff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            z-index: 10;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        #boot-screen {
+            background-color: #000;
+            color: #fff;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .logo-container {
+            font-size: 80px;
+            font-weight: 800;
+            letter-spacing: -2px;
+            background: linear-gradient(45deg, #ff416c, #ff4b2b, #007aff, #00ff75);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient-anim 8s ease infinite;
+            margin-bottom: 40px;
+        }
+
+        @keyframes gradient-anim {
+            0% { background-position: 0% 50% }
+            50% { background-position: 100% 50% }
+            100% { background-position: 0% 50% }
+        }
+
+        .progress-bar {
+            width: 200px;
+            height: 4px;
+            background-color: #333;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background-color: #fff;
+            transition: width 0.1s linear;
+        }
+
+        #setup-screen {
+            background: linear-gradient(135deg, #1f1c2c, #928dab);
+            justify-content: center;
+            align-items: center;
+            z-index: 90;
+        }
+
+        .setup-wizard {
+            width: 700px;
+            height: 480px;
+            background: var(--window-bg);
+            backdrop-filter: var(--bg-blur);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            display: flex;
+            overflow: hidden;
+            border: 1px solid var(--window-border);
+        }
+
+        .setup-sidebar {
+            width: 220px;
+            background: rgba(0, 0, 0, 0.05);
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 30px 20px;
+        }
+
+        .setup-sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 25px;
+            color: #000;
+        }
+
+        .step-item {
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .step-item.active {
+            background: var(--accent-color);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .setup-content {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            color: var(--text-color);
+        }
+
+        .setup-pane {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .setup-pane.active {
+            display: flex;
+        }
+
+        .setup-pane h3 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #000;
+        }
+
+        .setup-pane p {
+            font-size: 14px;
+            color: var(--text-light);
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .setup-input {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+            width: 100%;
+            margin-bottom: 15px;
+            outline: none;
+        }
+
+        .setup-input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .setup-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: auto;
+        }
+
+        .btn {
+            padding: 8px 20px;
+            border-radius: 6px;
+            border: none;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: rgba(0,0,0,0.1);
+            color: #333;
+        }
+
+        #desktop-screen {
+            background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop') no-repeat center center;
+            background-size: cover;
+            flex-direction: column;
+            z-index: 50;
+        }
+
+        .menu-bar {
+            width: 100%;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #000;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .menu-left, .menu-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .menu-item {
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .menu-item:hover {
+            background: rgba(0,0,0,0.1);
+        }
+
+        .menu-item.brand {
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .desktop-area {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            padding: 20px;
+        }
+
+        .window {
+            position: absolute;
+            width: 600px;
+            height: 400px;
+            background: var(--window-bg);
+            backdrop-filter: var(--bg-blur);
+            border-radius: 12px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.25);
+            border: 1px solid var(--window-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 300px;
+            min-height: 200px;
+            z-index: 100;
+        }
+
+        .window-header {
+            height: 38px;
+            background: rgba(0,0,0,0.03);
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            position: relative;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            cursor: move;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 8px;
+            position: absolute;
+            left: 12px;
+        }
+
+        .control-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+        }
+
+        .control-close { background-color: #ff5f56; }
+        .control-minimize { background-color: #ffbd2e; }
+        .control-maximize { background-color: #27c93f; }
+
+        .window-title {
+            width: 100%;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(0,0,0,0.7);
+        }
+
+        .window-content {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .dock-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .dock {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(20px);
+            padding: 8px;
+            border-radius: 20px;
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            pointer-events: auto;
+        }
+
+        .dock-item {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-origin: bottom;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .dock-item:hover {
+            transform: scale(1.25);
+            margin: 0 8px;
+        }
+
+        .dock-item .tooltip {
+            position: absolute;
+            top: -35px;
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: none;
+            white-space: nowrap;
+        }
+
+        .dock-item:hover .tooltip {
+            display: block;
+        }
+
+        .store-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 15px;
+        }
+        .app-card {
+            background: rgba(0,0,0,0.03);
+            border: 1px solid rgba(0,0,0,0.05);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .app-card i { font-size: 28px; color: var(--accent-color); }
+        .app-card h4 { font-size: 13px; }
+        .app-card button {
+            width: 100%;
+            padding: 4px;
+            border-radius: 12px;
+            border: none;
+            background: var(--accent-color);
+            color: #fff;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .browser-container { display: flex; flex-direction: column; height: 100%; }
+        .browser-bar { display: flex; gap: 8px; margin-bottom: 10px; }
+        .browser-bar input { flex: 1; padding: 6px 12px; border-radius: 20px; border: 1px solid #ccc; outline: none; font-size: 12px;}
+        .browser-content { flex: 1; background: #fff; border: 1px solid #ddd; border-radius: 6px; display: flex; justify-content: center; align-items: center; color: #999; }
+        .notes-area { width: 100%; height: 100%; border: none; resize: none; background: transparent; outline: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div id="boot-screen" class="screen active">
+        <div class="logo-container">Legend OS</div>
+        <div class="progress-bar">
+            <div id="boot-progress" class="progress-fill"></div>
+        </div>
+    </div>
+
+    <div id="setup-screen" class="screen">
+        <div class="setup-wizard">
+            <div class="setup-sidebar">
+                <h2>Legend OS Setup</h2>
+                <div class="step-item active" id="step-nav-1">Language</div>
+                <div class="step-item" id="step-nav-2">Account</div>
+                <div class="step-item" id="step-nav-3">Complete</div>
+            </div>
+            <div class="setup-content">
+                <div class="setup-pane active" id="pane-1">
+                    <h3>Select Your Language</h3>
+                    <p>Welcome to your new Legend OS experience. Please pick a preferred language to get started with setting up your operating system environment.</p>
+                    <select class="setup-input">
+                        <option>English (United States)</option>
+                        <option>English (United Kingdom)</option>
+                        <option>Español</option>
+                        <option>Français</option>
+                        <option>Deutsch</option>
+                    </select>
+                    <div class="setup-buttons">
+                        <button class="btn btn-primary" onclick="nextStep(2)">Continue</button>
+                    </div>
+                </div>
+
+                <div class="setup-pane" id="pane-2">
+                    <h3>Create Local Profile</h3>
+                    <p>Set up a master user account credentials for Legend OS desktop environment.</p>
+                    <input type="text" id="username-input" class="setup-input" placeholder="Enter Full Name" value="Legend User">
+                    <input type="password" class="setup-input" placeholder="Password" value="••••••••">
+                    <div class="setup-buttons">
+                        <button class="btn btn-secondary" onclick="nextStep(1)">Back</button>
+                        <button class="btn btn-primary" onclick="nextStep(3)">Continue</button>
+                    </div>
+                </div>
+
+                <div class="setup-pane" id="pane-3">
+                    <h3>All Set!</h3>
+                    <p>Your Legend OS architecture configuration is complete. Click below to enter your brand new interactive workspace layout.</p>
+                    <div class="setup-buttons">
+                        <button class="btn btn-primary" onclick="finishSetup()">Get Started</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="desktop-screen" class="screen">
+        <div class="menu-bar">
+            <div class="menu-left">
+                <div class="menu-item brand">⚡ Legend OS</div>
+                <div class="menu-item">File</div>
+                <div class="menu-item">Edit</div>
+                <div class="menu-item">View</div>
+                <div class="menu-item">Go</div>
+                <div class="menu-item">Window</div>
+                <div class="menu-item">Help</div>
+            </div>
+            <div class="menu-right">
+                <div class="menu-item" id="desktop-user">User</div>
+                <div class="menu-item"><i class="fa-solid fa-wifi"></i></div>
+                <div class="menu-item" id="live-clock">10:00 AM</div>
+            </div>
+        </div>
+
+        <div class="desktop-area" id="desktop-area"></div>
+
+        <div class="dock-container">
+            <div class="dock">
+                <div class="dock-item" onclick="openApp('store')" style="background: #e1f5fe;">
+                    <i class="fa-solid fa-bag-shopping" style="color: #0288d1;"></i>
+                    <span class="tooltip">Legend Store</span>
+                </div>
+                <div class="dock-item" onclick="openApp('browser')" style="background: #e8f5e9;">
+                    <i class="fa-solid fa-compass" style="color: #388e3c;"></i>
+                    <span class="tooltip">Legend Browser</span>
+                </div>
+                <div class="dock-item" onclick="openApp('notes')" style="background: #fffde7;">
+                    <i class="fa-solid fa-pen-to-square" style="color: #fbc02d;"></i>
+                    <span class="tooltip">Legend Notes</span>
+                </div>
+                <div class="dock-item" onclick="openApp('system')" style="background: #eceff1;">
+                    <i class="fa-solid fa-gear" style="color: #455a64;"></i>
+                    <span class="tooltip">System Config</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            let progress = 0;
+            const progressFill = document.getElementById('boot-progress');
+            
+            const interval = setInterval(() => {
+                progress += Math.floor(Math.random() * 15) + 5;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        document.getElementById('boot-screen').classList.remove('active');
+                        document.getElementById('setup-screen').classList.add('active');
+                    }, 500);
+                }
+                progressFill.style.width = progress + '%';
+            }, 150);
+
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('live-clock').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }, 1000);
+        });
+
+        function nextStep(stepNumber) {
+            document.querySelectorAll('.setup-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.step-item').forEach(s => s.classList.remove('active'));
+            
+            document.getElementById('pane-' + stepNumber).classList.add('active');
+            document.getElementById('step-nav-' + stepNumber).classList.add('active');
+        }
+
+        function finishSetup() {
+            const userName = document.getElementById('username-input').value || 'Legend User';
+            document.getElementById('desktop-user').innerText = userName;
+            document.getElementById('setup-screen').classList.remove('active');
+            document.getElementById('desktop-screen').classList.add('active');
+        }
+
+        let topZIndex = 100;
+        const appTemplates = {
+            store: {
+                title: 'Legend App Store',
+                content: `
+                    <div class="store-grid">
+                        <div class="app-card">
+                            <i class="fa-solid fa-gamepad" style="color: #e91e63;"></i>
+                            <h4>Legend Arcade</h4>
+                            <button onclick="alert('Legend Arcade simulation installed to dock sandbox!')">Get</button>
+                        </div>
+                        <div class="app-card">
+                            <i class="fa-solid fa-chart-pie" style="color: #9c27b0;"></i>
+                            <h4>Legend Analytics</h4>
+                            <button onclick="alert('Legend Analytics installed successfully.')">Get</button>
+                        </div>
+                        <div class="app-card">
+                            <i class="fa-solid fa-cloud" style="color: #00bcd4;"></i>
+                            <h4>Legend Cloud</h4>
+                            <button onclick="alert('Legend Drive connected to system.')">Get</button>
+                        </div>
+                    </div>
+                `
+            },
+            browser: {
+                title: 'Legend Browser',
+                content: `
+                    <div class="browser-container">
+                        <div class="browser-bar">
+                            <input type="text" value="https://www.legend-search.os" id="browser-url-input">
+                        </div>
+                        <div class="browser-content" id="browser-body">
+                            <div style="text-align: center;">
+                                <h2>Legend Search Engine</h2>
+                                <p style="margin-top: 10px; color: #888;">Safe sandbox web surfing active.</p>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            notes: {
+                title: 'Legend Notes',
+                content: `<textarea class="notes-area" placeholder="Start typing your legendary thoughts..."></textarea>`
+            },
+            system: {
+                title: 'Legend System Configuration',
+                content: `
+                    <h3 style="margin-bottom:10px;">System Profile</h3>
+                    <p><strong>OS Name:</strong> Legend OS Alpha</p>
+                    <p><strong>Kernel Version:</strong> Legend-v4.1.0-Web</p>
+                    <p><strong>Storage Status:</strong> 256GB Virtual DOM Storage</p>
+                    <hr style="margin:15px 0; border: none; border-top:1px solid #ccc;">
+                    <h3>Personalization Accent</h3>
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        <span onclick="document.documentElement.style.setProperty('--accent-color', '#007aff')" style="width:20px; height:20px; background:#007aff; border-radius:50%; cursor:pointer;"></span>
+                        <span onclick="document.documentElement.style.setProperty('--accent-color', '#ff2d55')" style="width:20px; height:20px; background:#ff2d55; border-radius:50%; cursor:pointer;"></span>
+                        <span onclick="document.documentElement.style.setProperty('--accent-color', '#34c759')" style="width:20px; height:20px; background:#34c759; border-radius:50%; cursor:pointer;"></span>
+                    </div>
+                `
+            }
+        };
+
+        function openApp(appKey) {
+            const template = appTemplates[appKey];
+            if (!template) return;
+
+            const existingWindow = document.getElementById(\`win-\${appKey}\`);
+            if (existingWindow) {
+                topZIndex++;
+                existingWindow.style.zIndex = topZIndex;
+                return;
+            }
+
+            const desktopArea = document.getElementById('desktop-area');
+            const win = document.createElement('div');
+            win.id = \`win-\${appKey}\`;
+            win.className = 'window';
+            
+            const offset = (desktopArea.children.length * 20) % 150 + 50;
+            win.style.top = \`\${offset}px\`;
+            win.style.left = \`\${offset}px\`;
+            topZIndex++;
+            win.style.zIndex = topZIndex;
+
+            win.innerHTML = `
+                <div class="window-header" onmousedown="dragStart(event, 'win-\${appKey}')">
+                    <div class="window-controls">
+                        <button class="control-btn control-close" onclick="closeApp('win-\${appKey}')"></button>
+                        <button class="control-btn control-minimize"></button>
+                        <button class="control-btn control-maximize"></button>
+                    </div>
+                    <div class="window-title">\${template.title}</div>
+                </div>
+                <div class="window-content">
+                    \${template.content}
+                </div>
+            `;
+            
+            win.addEventListener('mousedown', () => {
+                topZIndex++;
+                win.style.zIndex = topZIndex;
+            });
+
+            desktopArea.appendChild(win);
+        }
+
+        function closeApp(windowId) {
+            const win = document.getElementById(windowId);
+            if (win) win.remove();
+        }
+
+        let activeDragElement = null;
+        let startX, startY, startLeft, startTop;
+
+        function dragStart(e, elementId) {
+            if (e.target.classList.contains('control-btn')) return;
+            
+            activeDragElement = document.getElementById(elementId);
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = parseInt(window.getComputedStyle(activeDragElement).left, 10) || 0;
+            startTop = parseInt(window.getComputedStyle(activeDragElement).top, 10) || 0;
+
+            document.addEventListener('mousemove', dragMove);
+            document.addEventListener('mouseup', dragEnd);
+        }
+
+        function dragMove(e) {
+            if (!activeDragElement) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            activeDragElement.style.left = (startLeft + dx) + 'px';
+            activeDragElement.style.top = (startTop + dy) + 'px';
+        }
+
+        function dragEnd() {
+            document.removeEventListener('mousemove', dragMove);
+            document.removeEventListener('mouseup', dragEnd);
+            activeDragElement = null;
+        }
+    </script>
+</body>
+</html>
