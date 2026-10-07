@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legend OS</title>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-blur: blur(20px);
+            --window-bg: rgba(255, 255, 255, 0.85);
+            --window-border: rgba(255, 255, 255, 0.3);
+            --text-color: #333;
+            --text-light: #666;
+            --accent-color: #007aff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+        }
+
+        /* SCREEN STATES */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            z-index: 10;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* 1. BOOT SCREEN */
+        #boot-screen {
+            background-color: #000;
+            color: #fff;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .logo-container {
+            font-size: 60px;
+            font-weight: 800;
+            letter-spacing: -2px;
+            background: linear-gradient(45deg, #ff416c, #ff4b2b, #007aff, #00ff75);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient-anim 8s ease infinite;
+            margin-bottom: 40px;
+        }
+
+        @keyframes gradient-anim {
+            0% { background-position: 0% 50% }
+            50% { background-position: 100% 50% }
+            100% { background-position: 0% 50% }
+        }
+
+        .progress-bar {
+            width: 200px;
+            height: 4px;
+            background-color: #333;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background-color: #fff;
+            transition: width 0.1s linear;
+        }
+
+        /* 2. SETUP SCREEN */
+        #setup-screen {
+            background: linear-gradient(135deg, #1f1c2c, #928dab);
+            justify-content: center;
+            align-items: center;
+            z-index: 90;
+            padding: 20px;
+        }
+
+        .setup-wizard {
+            width: 100%;
+            max-width: 700px;
+            height: 480px;
+            background: var(--window-bg);
+            backdrop-filter: var(--bg-blur);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            display: flex;
+            overflow: hidden;
+            border: 1px solid var(--window-border);
+        }
+
+        .setup-sidebar {
+            width: 200px;
+            background: rgba(0, 0, 0, 0.05);
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 30px 15px;
+        }
+
+        .setup-sidebar h2 {
+            font-size: 16px;
+            margin-bottom: 25px;
+            color: #000;
+        }
+
+        .step-item {
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .step-item.active {
+            background: var(--accent-color);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .setup-content {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            color: var(--text-color);
+        }
+
+        .setup-pane {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .setup-pane.active {
+            display: flex;
+        }
+
+        .setup-pane h3 {
+            font-size: 22px;
+            margin-bottom: 15px;
+            color: #000;
+        }
+
+        .setup-pane p {
+            font-size: 13px;
+            color: var(--text-light);
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .setup-input {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+            width: 100%;
+            margin-bottom: 15px;
+            outline: none;
+        }
+
+        .setup-input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .setup-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: auto;
+        }
+
+        .btn {
+            padding: 8px 20px;
+            border-radius: 6px;
+            border: none;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: rgba(0,0,0,0.1);
+            color: #333;
+        }
+
+        /* 3. DESKTOP SCREEN */
+        #desktop-screen {
+            background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop') no-repeat center center;
+            background-size: cover;
+            flex-direction: column;
+            z-index: 50;
+        }
+
+        /* TOP MENU BAR */
+        .menu-bar {
+            width: 100%;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #000;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .menu-left, .menu-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-item {
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .menu-item.brand {
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        /* WINDOW MANAGER */
+        .desktop-area {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .window {
+            position: absolute;
+            width: 90%;
+            max-width: 450px;
+            height: 380px;
+            background: var(--window-bg);
+            backdrop-filter: var(--bg-blur);
+            border-radius: 12px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.25);
+            border: 1px solid var(--window-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 100;
+        }
+
+        .window-header {
+            height: 38px;
+            background: rgba(0,0,0,0.03);
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            position: relative;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            cursor: move;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 8px;
+            position: absolute;
+            left: 12px;
+        }
+
+        .control-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+        }
+
+        .control-close { background-color: #ff5f56; }
+        .control-minimize { background-color: #ffbd2e; }
+        .control-maximize { background-color: #27c93f; }
+
+        .window-title {
+            width: 100%;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(0,0,0,0.7);
+        }
+
+        .window-content {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            color: #333;
+            font-size: 14px;
+        }
+
+        /* SYSTEM DOCK */
+        .dock-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .dock {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(20px);
+            padding: 8px;
+            border-radius: 20px;
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            pointer-events: auto;
+        }
+
+        .dock-item {
+            width: 44px;
+            height: 44px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-origin: bottom;
+            position: relative;
+        }
+
+        .dock-item:hover {
+            transform: scale(1.15);
+        }
+
+        /* APP LAYOUTS */
+        .calc-wrapper {
+            max-width: 240px;
+            margin: 0 auto;
+            background: #1d1d1f;
+            padding: 12px;
+            border-radius: 16px;
+        }
+        .calc-screen {
+            width: 100%;
+            height: 45px;
+            background: #2c2c2e;
+            border: none;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            text-align: right;
+            padding: 10px;
+            font-size: 22px;
+            color: #fff;
+            outline: none;
+        }
+        .calc-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+        .calc-btn {
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        .btn-num { background: #3a3a3c; color: #fff; }
+        .btn-op { background: #ff9f0a; color: #fff; }
+        .btn-fn { background: #a2a2a6; color: #000; }
+
+        .store-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 12px;
+        }
+        .app-card {
+            background: rgba(0,0,0,0.03);
+            border: 1px solid rgba(0,0,0,0.05);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .app-card i { font-size: 24px; color: var(--accent-color); }
+        .app-card h4 { font-size: 12px; }
+        .app-card button {
+            width: 100%;
+            padding: 4px;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent-color);
+            color: #fff;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .browser-container { display: flex; flex-direction: column; height: 100%; }
+        .browser-bar { display: flex; gap: 8px; margin-bottom: 10px; }
+        .browser-bar input { flex: 1; padding: 6px 12px; border-radius: 20px; border: 1px solid #ccc; outline: none; font-size: 12px;}
+        .browser-content { flex: 1; background: #fff; border: 1px solid #ddd; border-radius: 6px; display: flex; justify-content: center; align-items: center; color: #999; text-align: center; padding: 20px; }
+        .notes-area { width: 100%; height: 100%; border: none; resize: none; background: transparent; outline: none; font-size: 14px; }
+
+        @media (max-width: 600px) {
+            .setup-wizard { flex-direction: column; height: auto; min-height: 400px; }
+            .setup-sidebar { width: 100%; display: flex; padding: 15px; border-right: none; border-bottom: 1px solid rgba(0,0,0,0.1); }
+            .setup-sidebar h2 { display: none; }
+            .step-item { margin-bottom: 0; margin-right: 8px; padding: 6px 10px; }
+            .menu-left .menu-item:not(.brand) { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="boot-screen" class="screen active">
+        <div class="logo-container">Legend OS</div>
+        <div class="progress-bar">
+            <div id="boot-progress" class="progress-fill"></div>
+        </div>
+    </div>
+
+    <div id="setup-screen" class="screen">
+        <div class="setup-wizard">
+            <div class="setup-sidebar">
+                <h2>Legend OS Setup</h2>
+                <div class="step-item active" id="step-nav-1">Language</div>
+                <div class="step-item" id="step-nav-2">Account</div>
+                <div class="step-item" id="step-nav-3">Complete</div>
+            </div>
+            <div class="setup-content">
+                <div class="setup-pane active" id="pane-1">
+                    <h3>Select Your Language</h3>
+                    <p>Welcome to Legend OS. Please choose your installation layout language to continue setting up your terminal architecture.</p>
+                    <select class="setup-input">
+                        <option>English (United States)</option>
+                        <option>English (United Kingdom)</option>
+                        <option>Español</option>
+                        <option>Français</option>
+                    </select>
+                    <div class="setup-buttons">
+                        <button class="btn btn-primary" onclick="nextStep(2)">Continue</button>
+                    </div>
+                </div>
+
+                <div class="setup-pane" id="pane-2">
+                    <h3>Create Local Profile</h3>
+                    <p>Configure local administrator credentials for your desktop terminal session.</p>
+                    <input type="text" id="username-input" class="setup-input" placeholder="Enter Username" value="Legend User">
+                    <input type="password" class="setup-input" placeholder="Password" value="••••••••">
+                    <div class="setup-buttons">
+                        <button class="btn btn-secondary" onclick="nextStep(1)">Back</button>
+                        <button class="btn btn-primary" onclick="nextStep(3)">Continue</button>
+                    </div>
+                </div>
+
+                <div class="setup-pane" id="pane-3">
+                    <h3>Configuration Ready!</h3>
+                    <p>Your local virtual storage matrix is assigned. Initialize the interface workspace to proceed.</p>
+                    <div class="setup-buttons">
+                        <button class="btn btn-primary" onclick="finishSetup()">Get Started</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="desktop-screen" class="screen">
+        <div class="menu-bar">
+            <div class="menu-left">
+                <div class="menu-item brand">⚡ Legend OS</div>
+                <div class="menu-item">File</div>
+                <div class="menu-item">Edit</div>
+                <div class="menu-item">View</div>
+                <div class="menu-item">Help</div>
+            </div>
+            <div class="menu-right">
+                <div class="menu-item" id="desktop-user">User</div>
+                <div class="menu-item"><i class="fa-solid fa-wifi"></i></div>
+                <div class="menu-item" id="live-clock">10:00 AM</div>
+            </div>
+        </div>
+
+        <div id="desktop-area" class="desktop-area"></div>
+
+        <div class="dock-container">
+            <div class="dock">
+                <div class="dock-item" onclick="openApp('calculator')" style="background: #ffe0b2;">
+                    <i class="fa-solid fa-calculator" style="color: #e65100;"></i>
+                </div>
+                <div class="dock-item" onclick="openApp('store')" style="background: #e1f5fe;">
+                    <i class="fa-solid fa-bag-shopping" style="color: #0288d1;"></i>
+                </div>
+                <div class="dock-item" onclick="openApp('browser')" style="background: #e8f5e9;">
+                    <i class="fa-solid fa-compass" style="color: #388e3c;"></i>
+                </div>
+                <div class="dock-item" onclick="openApp('notes')" style="background: #fffde7;">
+                    <i class="fa-solid fa-pen-to-square" style="color: #fbc02d;"></i>
+                </div>
+                <div class="dock-item" onclick="openApp('system')" style="background: #eceff1;">
+                    <i class="fa-solid fa-gear" style="color: #455a64;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // BOOT ANIMATION HANDLER
+        window.addEventListener('DOMContentLoaded', () => {
+            let progress = 0;
+            const progressFill = document.getElementById('boot-progress');
+            
+            const interval = setInterval(() => {
+                progress += Math.floor(Math.random() * 20) + 10;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        document.getElementById('boot-screen').classList.remove('active');
+                        document.getElementById('setup-screen').classList.add('active');
+                    }, 400);
+                }
+                progressFill.style.width = progress + '%';
+            }, 100);
+
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('live-clock').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }, 1000);
+        });
+
+        // WIZARD MANAGER
+        function nextStep(stepNumber) {
+            document.querySelectorAll('.setup-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.step-item').forEach(s => s.classList.remove('active'));
+            document.getElementById('pane-' + stepNumber).classList.add('active');
+            document.getElementById('step-nav-' + stepNumber).classList.add('active');
+        }
+
+        function finishSetup() {
+            const userName = document.getElementById('username-input').value || 'Legend User';
+            document.getElementById('desktop-user').innerText = userName;
+            document.getElementById('setup-screen').classList.remove('active');
+            document.getElementById('desktop-screen').classList.add('active');
+        }
+
+        // CALCULATION LOGIC HANDLER
+        let calcVal = '';
+        function pressCalc(num) {
+            calcVal += num;
+            const disp = document.getElementById('calc-display');
+            if(disp) disp.value = calcVal;
+        }
+        function clearCalc() {
+            calcVal = '';
+            const disp = document.getElementById('calc-display');
+            if(disp) disp.value = '';
+        }
+        function runCalc() {
+            try {
+                let result = eval(calcVal);
+                calcVal = result.toString();
+                document.getElementById('calc-display').value = calcVal;
+            } catch (err) {
+                document.getElementById('calc-display').value = 'Error';
+                calcVal = '';
+            }
+        }
+
+        // WINDOW CONFIGURATION ENGINE
+        let topZIndex = 100;
+        const appTemplates = {
+            calculator: {
+                title: 'Legend Calculator',
+                content: `
+                    <div class="calc-wrapper">
+                        <input type="text" class="calc-screen" id="calc-display" readonly placeholder="0">
+                        <div class="calc-buttons">
+                            <button class="calc-btn btn-fn" onclick="clearCalc()">C</button>
+                            <button class="calc-btn btn-fn">(</button>
+                            <button class="calc-btn btn-fn">)</button>
+                            <button class="calc-btn btn-op" onclick="pressCalc('/')">/</button>
+                            <button class="calc-btn btn-num" onclick="pressCalc('7')">7</button>
+                            <button class="calc-btn btn-num" onclick="pressCalc('8')">8</button>
+                            <button class="calc-btn btn-num" onclick="pressCalc('9')">9</button>
+                            <button class="calc-btn btn-op" onclick="pressCalc('*')">×</button>
+                            <button class="calc-btn btn-num" onclick="pressCalc('4')">4</button>
+                            <button class="calc-btn btn-num" onclick="pressCalc('5')">5</button>
+                            <button class="calc-btn btn-num" onclick="pressCalc('6')">6</button>
+                            <button class="calc-btn btn-op" onclick="pressCalc('-')">-</button>
+                            <button class="calc-btn btn-num" onclick="pressCalc('1')">1</button>
+                            <button class="calc-btn btn-num" onclick="pressCalc('2')">2</button>
+                            <button class="calc-btn btn-num" onclick="pressCalc('3')">3</button>
+                            <button class="calc-btn btn-op" onclick="pressCalc('+')">+</button>
+                            <button class="calc-btn btn-num" style="grid-column: span 2; border-radius: 20px;" onclick="pressCalc('0')">0</button>
+                            <button class="calc-btn btn-num" onclick="pressCalc('.')">.</button>
+                            <button class="calc-btn btn-op" onclick="runCalc()">=</button>
+                        </div>
+                    </div>
+                `
+            },
+            store: {
+                title: 'Legend App Store',
+                content: `
+                    <div class="store-grid">
+                        <div class="app-card">
+                            <i class="fa-solid fa-gamepad" style="color: #e91e63;"></i>
+                            <h4>Legend Arcade</h4>
+                            <button onclick="alert('Simulation added to sandboxed workspace!')">Get</button>
+                        </div>
+                        <div class="app-card">
+                            <i class="fa-solid fa-chart-pie" style="color: #9c27b0;"></i>
+                            <h4>Legend Metrics</h4>
+                            <button onclick="alert('Legend Metrics synchronized.')">Get</button>
+                        </div>
+                    </div>
+                `
+            },
+            browser: {
+                title: 'Legend Browser',
+                content: `
+                    <div class="browser-container">
+                        <div class="browser-bar"><input type="text" value="https://www.legend-search.os"></div>
+                        <div class="browser-content">
+                            <div>
+                                <h2>Legend Browser Sandbox</h2>
+                                <p style="color: #888; font-size:12px; margin-top:5px;">Secure browsing session initiated.</p>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            notes: {
+                title: 'Legend Notes',
+                content: `<textarea class="notes-area" placeholder="Type notes safely stored in virtual session memory..."></textarea>`
+            },
+            system: {
+                title: 'System Settings',
+                content: `
+                    <h4 style="margin-bottom:6px;">System Parameters</h4>
+                    <p style="font-size:12px;"><strong>Core Engine:</strong> Legend OS Workspace</p>
+                    <p style="font-size:12px;"><strong>Runtime Architecture:</strong> HTML5 DOM Interface</p>
+                    <hr style="margin:10px 0; border:none; border-top:1px solid #ccc;">
+                    <h4 style="margin-bottom:6px;">Workspace Highlight Tint</h4>
+                    <div style="display:flex; gap:8px;">
+                        <span onclick="document.documentElement.style.setProperty('--accent-color', '#007aff')" style="width:18px; height:18px; background:#007aff; border-radius:50%; cursor:pointer;"></span>
+                        <span onclick="document.documentElement.style.setProperty('--accent-color', '#ff2d55')" style="width:18px; height:18px; background:#ff2d55; border-radius:50%; cursor:pointer;"></span>
+                        <span onclick="document.documentElement.style.setProperty('--accent-color', '#34c759')" style="width:18px; height:18px; background:#34c759; border-radius:50%; cursor:pointer;"></span>
+                    </div>
+                `
+            }
+        };
+
+        function openApp(appKey) {
+            const template = appTemplates[appKey];
+            if (!template) return;
+
+            const desktopArea = document.getElementById('desktop-area');
+            const existingWindow = document.getElementById(`win-${appKey}`);
+            if (existingWindow) {
+                topZIndex++;
+                existingWindow.style.zIndex = topZIndex;
+                return;
+            }
+
+            const win = document.createElement('div');
+            win.id = `win-${appKey}`;
+            win.className = 'window';
+            
+            const windowCount = desktopArea.querySelectorAll('.window').length;
+            const offset = (windowCount * 25) % 100 + 20;
+            win.style.top = `${offset}px`;
+            win.style.left = window.innerWidth > 600 ? `${offset}px` : '5%';
+            topZIndex++;
+            win.style.zIndex = topZIndex;
+
+            win.innerHTML = `
+                <div class="window-header" onmousedown="dragStart(event)" ontouchstart="dragStart(event)">
+                    <div class="window-controls">
+                        <button class="control-btn control-close" onclick="closeApp('win-${appKey}')"></button>
+                        <button class="control-btn control-minimize"></button>
+                        <button class="control-btn control-maximize"></button>
+                    </div>
+                    <div class="window-title">${template.title}</div>
+                </div>
+                <div class="window-content">${template.content}</div>
+            `;
+            
+            win.addEventListener('mousedown', () => { topZIndex++; win.style.zIndex = topZIndex; });
+            win.addEventListener('touchstart', () => { topZIndex++; win.style.zIndex = topZIndex; });
+            desktopArea.appendChild(win);
+        }
+
+        function closeApp(windowId) {
+            const win = document.getElementById(windowId);
+            if (win) win.remove();
+        }
+
+        // DRAG AND DROP UTILITY MATRIX
+        let activeDragElement = null;
+        let startX, startY, startLeft, startTop;
+
+        function dragStart(e) {
+            if (e.target.classList.contains('control-btn') || e.target.closest('.calc-wrapper') || e.target.closest('input') || e.target.closest('textarea')) return;
+            
+            const clientX = e.type.startsWith('touch') ? e.touches.clientX : e.clientX;
+            const clientY = e.type.startsWith('touch') ? e.touches.clientY : e.clientY;
+            
+            activeDragElement = e.target.closest('.window');
+            if(!activeDragElement) return;
+
+            startX = clientX;
+            startY = clientY;
+            startLeft = parseInt(window.getComputedStyle(activeDragElement).left, 10) || 0;
+            startTop = parseInt(window.getComputedStyle(activeDragElement).top, 10) || 0;
+
+            if (e.type.startsWith('touch')) {
+                document.addEventListener('touchmove', dragMove, { passive: false });
+                document.addEventListener('touchend', dragEnd);
+            } else {
+                document.addEventListener('mousemove', dragMove);
+                document.addEventListener('mouseup', dragEnd);
+            }
+        }
+
+        function dragMove(e) {
+            if (!activeDragElement) return;
+            if (e.type === 'touchmove') e.preventDefault();
+            
+            const clientX = e.type.startsWith('touch') ? e.touches.clientX : e.clientX;
+            const clientY = e.type.startsWith('touch') ? e.touches.clientY : e.clientY;
+            
+            const dx = clientX - startX;
+            const dy = clientY - startY;
+            activeDragElement.style.left = (startLeft + dx) + 'px';
+            activeDragElement.style.top = (startTop + dy) + 'px';
+        }
+
+        function dragEnd(e) {
+            if (e.type.startsWith('touch')) {
+                document.removeEventListener('touchmove', dragMove);
+                document.removeEventListener('touchend', dragEnd);
+            } else {
+                document.removeEventListener('mousemove', dragMove);
+                document.removeEventListener('mouseup', dragEnd);
+            }
+            activeDragElement = null;
+        }
+    </script>
+</body>
+</html>
